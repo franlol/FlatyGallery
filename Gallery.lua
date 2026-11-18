@@ -23,7 +23,7 @@ local S = {
     color = { r = 0.27, g = 0.75, b = 0.45, a = 0.8 },
     colorSolid = { r = 1, g = 0.82, b = 0, a = 1 },
     colorLocked = { r = 0.4, g = 0.6, b = 1, a = 1 },
-    showCard = true, advanced = false, opt = true, tab = "general",
+    showCard = true, advanced = false, extras = true, sectionOn = true, pinned = false, opt = true, tab = "general",
     greyAll = false, spanish = false,
 }
 local groupVals = { buffs = true, debuffs = true, casts = false, pets = false, focus = true, boss = false }
@@ -70,6 +70,18 @@ UI.OnRefresh = function() for _, f in ipairs(texts) do f() end end
 local folds = {}
 local function Card(page, col, title, subtitle, opts)
     return page:Add(col, UI.Card(page.content, title, subtitle, opts))
+end
+
+-- a row of icon buttons, left to right. defs = { { icon, onClick, opts }, ... }
+local function IconRow(parent, size, defs, opts)
+    local r = UI.Row(parent, size, opts)
+    local last
+    for _, d in ipairs(defs) do
+        local b = UI.IconButton(r, d[1], size, d[2], d[3])
+        if last then b:SetPoint("LEFT", last, "RIGHT", 4, 0) else b:SetPoint("LEFT") end
+        last = b
+    end
+    return r
 end
 
 -------------------------------------------------------------------------------
@@ -119,6 +131,27 @@ local function BuildButtons(container)
             UI.Dialog("Reload the interface now?", nil, function() Log("Dialog", "accepted") end)
         end },
     }, E()))
+
+    c = Card(page, 2, "Icon buttons", "Drawn glyphs, or any texture for the rest.")
+    local GL = { "plus", "minus", "close", "more", "up", "down", "left", "right" }
+    for _, size in ipairs({ 16, 20 }) do
+        c:Add(UI.Heading(c, size .. " px"))
+        local defs = {}
+        for i, g in ipairs(GL) do defs[i] = { g, Click("Icon " .. g), { tip = g } } end
+        c:Add(IconRow(c, size, defs, E()))
+    end
+    c:Add(UI.Heading(c, "States"))
+    c:Add(IconRow(c, 20, {
+        { "close", Click("Icon delete"), { tip = "Danger", style = "danger" } },
+        { "more", function() S.pinned = not S.pinned Log("Toggle", S.pinned) UI.RefreshAll() end,
+            { tip = "Toggle: lit while on", isOn = function() return S.pinned end } },
+        { "Interface\\Icons\\INV_Misc_Gear_01", Click("Icon texture"), { tip = "Texture" } },
+    }, E()))
+    c:Add(UI.Heading(c, "Disabled"))
+    c:Add(IconRow(c, 20, {
+        { "plus", Click("x") }, { "close", Click("x"), { style = "danger" } },
+        { "Interface\\Icons\\INV_Misc_Gear_01", Click("x") },
+    }, Off()))
 
     page:Layout()
 end
@@ -508,10 +541,31 @@ local function BuildCards(container)
         E({ showIf = function() return S.advanced end })))
     c:Add(UI.Note(c, "Hidden rows leave no gap.", { showIf = function() return not S.advanced end }))
 
-    c = Card(page, 2, "Folding card", "Click the title bar to fold it.", {
+    c = Card(page, 1, "Headings and separators", "A heading or separator with nothing visible under it hides.")
+    c:Add(UI.Switch(c, "Show the extras group", Get("extras"), Set("extras", "Extras"), E()))
+    c:Add(UI.Heading(c, "General"))
+    c:Add(UI.Check(c, "Show health", Get("checkOn"), Set("checkOn", "Health"), E()))
+    c:Add(UI.Check(c, "Show power", Get("checkTip"), Set("checkTip", "Power"), E()))
+    c:Add(UI.Separator(c))
+    c:Add(UI.Check(c, "After a separator", Get("opt"), Set("opt", "Row"), E()))
+    c:Add(UI.Heading(c, "Extras"))
+    c:Add(UI.Check(c, "Show threat", Get("swOn"), Set("swOn", "Threat"),
+        E({ showIf = function() return S.extras end })))
+    c:Add(UI.Slider(c, "Threat size", 8, 64, 1, Get("size"), Set("size", "Size"),
+        E({ format = UI.px, showIf = function() return S.extras end })))
+
+    c = Card(page, 2, "Header buttons", "Icon buttons on the right of the title.")
+    c:AddHeaderButton("close", Click("Header delete"), { tip = "Delete", style = "danger" })
+    c:AddHeaderButton("more", function() S.pinned = not S.pinned Log("Toggle", S.pinned) UI.RefreshAll() end,
+        { tip = "Toggle", isOn = function() return S.pinned end })
+    c:AddHeaderButton("plus", Click("Header add"), { tip = "Add" })
+    c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
+
+    c = Card(page, 2, "Folding card", "Click the title bar to fold it. Header buttons stay while folded.", {
         fold = true, store = folds,
         summary = function() return "Size " .. S.size .. " px, opacity " .. UI.pct(S.alpha) end,
     })
+    c:AddHeaderButton("plus", Click("Header add"), { tip = "Add" })
     c:Add(UI.Slider(c, "Size", 8, 64, 1, Get("size"), Set("size", "Size"), E({ format = UI.px })))
     c:Add(UI.Slider(c, "Opacity", 0, 1, 0.05, Get("alpha"), Set("alpha", "Opacity"), E({ format = UI.pct })))
 
@@ -525,6 +579,45 @@ local function BuildCards(container)
 
     c = Card(page, 2, "Shown on demand", "Hidden cards close the gap in their column.")
     c.showIf = function() return S.showCard end
+    c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
+
+    page:Layout()
+end
+
+-------------------------------------------------------------------------------
+-- Sections: titles across the whole page between cards
+-------------------------------------------------------------------------------
+local function BuildSections(container)
+    local page = UI.Page(container, 2)
+
+    page:AddSection("Appearance")
+    local c = Card(page, 1, "Bars")
+    c:Add(UI.Check(c, "Show health", Get("checkOn"), Set("checkOn", "Health"), E()))
+    c:Add(UI.Slider(c, "Size", 8, 64, 1, Get("size"), Set("size", "Size"), E({ format = UI.px })))
+    c = Card(page, 1, "Texts")
+    c:Add(UI.Check(c, "Show name", Get("checkTip"), Set("checkTip", "Name"), E()))
+    c = Card(page, 2, "Colors")
+    c:Add(UI.Swatch(c, "Health color", Get("color"), function() Log("Color", S.color) end, E({ alpha = true })))
+    c:Add(UI.Switch(c, "Show the last section", Get("sectionOn"), Set("sectionOn", "Last section"), E()))
+
+    page:AddSection("Behavior")
+    c = Card(page, 1, "Combat")
+    c:Add(UI.Check(c, "Hide in combat", Get("checkOff"), Set("checkOff", "Hide in combat"), E()))
+    c = Card(page, 2, "Fading")
+    c:Add(UI.Slider(c, "Fade time", 0, 5, 0.1, Get("time"), Set("time", "Fade time"),
+        E({ format = function(v) return ("%.1f s"):format(v) end })))
+
+    page:AddSection()
+    c = Card(page, 1, "After a plain line", "A section with no title is just a line.")
+    c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
+
+    page:AddSection("Shown on demand")
+    local function On() return S.sectionOn end
+    c = Card(page, 1, "Hidden with the switch", "With no visible card, the section title hides too.")
+    c.showIf = On
+    c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
+    c = Card(page, 2, "Also hidden")
+    c.showIf = On
     c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
 
     page:Layout()
@@ -614,6 +707,7 @@ local function Open()
     win:AddSection("Containers")
     win:AddNav("lists", "Lists", BuildLists)
     win:AddNav("cards", "Cards", BuildCards)
+    win:AddNav("sections", "Sections", BuildSections)
     win:AddNav("split", "Tabs and split", BuildSplit)
     win:Select("buttons")
     win:SetStatus("Change anything: its new value shows here.")
