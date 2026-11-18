@@ -263,6 +263,18 @@ local function BuildValues(container)
     c:Add(UI.Segmented(c, "Disabled", { { "small", "Small" }, { "medium", "Medium" }, { "large", "Large" } },
         Get("seg3"), Set("seg3", "Segmented"), Off()))
 
+    c = Card(page, 1, "Tiles", "Exclusive choices shown as pictures.")
+    local function ShapeTiles()
+        local out = {}
+        for _, o in ipairs(UI.ShapeList()) do
+            out[#out + 1] = { o[1], (o[2]:gsub("^Flaty: ", "")), UI.GetShape(o[1]).mask }
+        end
+        return out
+    end
+    S.tile = S.tile or "round"
+    c:Add(UI.Tiles(c, "Shape", ShapeTiles, Get("tile"), Set("tile", "Tile"), E()))
+    c:Add(UI.Tiles(c, "Disabled", ShapeTiles, Get("tile"), Set("tile", "Tile"), Off()))
+
     c = Card(page, 2, "Dropdown", "More than three choices. One list open at a time; click outside to close.")
     c:Add(UI.Dropdown(c, "Short list", {
         { "TOP", "Top" }, { "BOTTOM", "Bottom" }, { "LEFT", "Left" }, { "RIGHT", "Right" }, { "CENTER", "Center" },
@@ -978,7 +990,13 @@ local function BuildShapes(container)
     c:Add(r)
 
     c = Card(page, 2, "Try it", "how TidyMap draws the minimap")
-    c:Add(UI.Dropdown(c, "Shape", UI.ShapeList, MGet("shape"), MSet("shape", "Shape"), E()))
+    c:Add(UI.Tiles(c, "Shape", function()
+        local out = {}
+        for _, o in ipairs(UI.ShapeList()) do
+            out[#out + 1] = { o[1], (o[2]:gsub("^Flaty: ", "")), UI.GetShape(o[1]).mask }
+        end
+        return out
+    end, MGet("shape"), MSet("shape", "Shape"), E()))
     c:Add(UI.Slider(c, "Border", 0, 8, 1, MGet("shapeBorder"), MSet("shapeBorder", "Border"), E({ format = UI.px })))
     c:Add(UI.Swatch(c, "Border color", MGet("shapeColor"), function() Log("Border color", M.shapeColor) end,
         E({ alpha = true, enableIf = function() return M.shapeBorder > 0 end })))
