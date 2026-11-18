@@ -132,8 +132,32 @@ local function BuildButtons(container)
         end },
     }, E()))
 
+    -- menu: + in the header picks a template, the list shows what was added
+    local added = {}
+    local TEMPLATES = {
+        { "health", "Health" }, { "name", "Name and level" }, { "power", "Power" },
+        { "threat", "Threat %" }, { "combo", "Combo points" },
+    }
+    c = Card(page, 1, "Menu", "+ opens a list of templates; picking one adds it.")
+    local function AddFrom(v)
+        for _, t in ipairs(TEMPLATES) do
+            if t[1] == v then added[#added + 1] = { name = t[2] } Log("Added", t[2]) end
+        end
+    end
+    c:AddHeaderButton("plus", function(self) UI.Menu(self, TEMPLATES, AddFrom) end, { tip = "Add from a template" })
+    c:Add(UI.List(c, E({
+        items = function() return added end,
+        label = function(d) return d.name end,
+        onRemove = function(i, d) table.remove(added, i) Log("Removed", d.name) end,
+        empty = "Nothing yet. Press + above.",
+        rows = 4,
+    })))
+    c:Add(UI.Buttons(c, { { "Menu from a text button", function(self)
+        UI.Menu(self, TEMPLATES, AddFrom)
+    end } }, E()))
+
     c = Card(page, 2, "Icon buttons", "Drawn glyphs, or any texture for the rest.")
-    local GL = { "plus", "minus", "close", "more", "up", "down", "left", "right" }
+    local GL = { "plus", "minus", "close", "more", "reset", "up", "down", "left", "right" }
     for _, size in ipairs({ 16, 20 }) do
         c:Add(UI.Heading(c, size .. " px"))
         local defs = {}
@@ -336,6 +360,15 @@ local function BuildColors(container)
     c:Add(UI.Swatch(c, "With opacity", Get("color"), function() Log("Color", S.color) end, E({ alpha = true })))
     c:Add(UI.Swatch(c, "Without opacity", Get("colorSolid"), function() Log("Color", S.colorSolid) end, E()))
     c:Add(UI.Swatch(c, "Disabled", Get("colorLocked"), nil, Off({ alpha = true })))
+
+    c = Card(page, 1, "Reset per color", "With a default, a reset icon shows while the color differs from it.")
+    local DEF = { r = 0.27, g = 0.75, b = 0.45, a = 1 }
+    S.colorDef1 = { r = 0.9, g = 0.3, b = 0.3, a = 1 }
+    S.colorDef2 = { r = DEF.r, g = DEF.g, b = DEF.b, a = DEF.a }
+    c:Add(UI.Swatch(c, "Changed (reset shows)", Get("colorDef1"), function() Log("Color", S.colorDef1) end,
+        E({ alpha = true, default = DEF })))
+    c:Add(UI.Swatch(c, "Default (no reset)", Get("colorDef2"), function() Log("Color", S.colorDef2) end,
+        E({ alpha = true, default = DEF })))
 
     c = Card(page, 2, "No color yet", "With nothing saved the swatch is empty and does not open.")
     c:Add(UI.Swatch(c, "Optional color", Get("colorOpt"), function() Log("Color", S.colorOpt) end, E({ alpha = true })))
