@@ -997,6 +997,14 @@ local function BuildShapes(container)
         end
         return out
     end, MGet("shape"), MSet("shape", "Shape"), E()))
+    -- every percent of roundness, from square to circle
+    c:Add(UI.Slider(c, "Corners", 0, 100, 1, function()
+        local s = UI.GetShape(M.shape)
+        return s.corners or 0
+    end, function(v)
+        M.shape = UI.Rounded(v)
+        Log("Corners", v .. "%")
+    end, E({ format = function(v) return ("%d%%"):format(v) end })))
     c:Add(UI.Slider(c, "Border", 0, 8, 1, MGet("shapeBorder"), MSet("shapeBorder", "Border"), E({ format = UI.px })))
     c:Add(UI.Swatch(c, "Border color", MGet("shapeColor"), function() Log("Border color", M.shapeColor) end,
         E({ alpha = true, enableIf = function() return M.shapeBorder > 0 end })))
