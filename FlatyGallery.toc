@@ -1,0 +1,8 @@
+## Interface: 16001
+## Title: Flaty Gallery
+## Notes: Every LibFlatyUI component in every state. Type /flaty
+## Author: franlol
+## Version: dev
+## Dependencies: LibFlatyUI-1.0
+
+Gallery.lua
