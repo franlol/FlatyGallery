@@ -609,6 +609,18 @@ local function BuildSections(container)
     c:Add(UI.Slider(c, "Fade time", 0, 5, 0.1, Get("time"), Set("time", "Fade time"),
         E({ format = function(v) return ("%.1f s"):format(v) end })))
 
+    page:AddSection("Mixed widths")
+    c = page:Add(1, UI.Card(page.content, "Wide card", "Takes both columns: page:Add(1, card, 2)."), 2)
+    c:Add(UI.Slider(c, "Size", 8, 64, 1, Get("size"), Set("size", "Size"), E({ format = UI.px })))
+    c = Card(page, 1, "Left")
+    c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
+    c:Add(UI.Check(c, "Another row", Get("checkOn"), Set("checkOn", "Row"), E()))
+    c = Card(page, 2, "Right")
+    c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
+    c = page:Add(1, UI.Card(page.content, "Wide again", "Starts under the taller of the two cards above."), 2)
+    c:Add(UI.Segmented(c, nil, { { "small", "Small" }, { "medium", "Medium" }, { "large", "Large" } },
+        Get("seg3"), Set("seg3", "Segmented"), E()))
+
     page:AddSection()
     c = Card(page, 1, "After a plain line", "A section with no title is just a line.")
     c:Add(UI.Check(c, "A row", Get("opt"), Set("opt", "Row"), E()))
