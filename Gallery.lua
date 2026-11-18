@@ -157,7 +157,7 @@ local function BuildButtons(container)
     end } }, E()))
 
     c = Card(page, 2, "Icon buttons", "Drawn glyphs, or any texture for the rest.")
-    local GL = { "plus", "minus", "close", "more", "reset", "up", "down", "left", "right" }
+    local GL = { "plus", "minus", "close", "more", "up", "down", "left", "right" }
     for _, size in ipairs({ 16, 20 }) do
         c:Add(UI.Heading(c, size .. " px"))
         local defs = {}
@@ -361,7 +361,7 @@ local function BuildColors(container)
     c:Add(UI.Swatch(c, "Without opacity", Get("colorSolid"), function() Log("Color", S.colorSolid) end, E()))
     c:Add(UI.Swatch(c, "Disabled", Get("colorLocked"), nil, Off({ alpha = true })))
 
-    c = Card(page, 1, "Reset per color", "With a default, a reset icon shows while the color differs from it.")
+    c = Card(page, 1, "Reset per color", "With a default, Reset shows while the color differs from it. It asks first.")
     local DEF = { r = 0.27, g = 0.75, b = 0.45, a = 1 }
     S.colorDef1 = { r = 0.9, g = 0.3, b = 0.3, a = 1 }
     S.colorDef2 = { r = DEF.r, g = DEF.g, b = DEF.b, a = DEF.a }
