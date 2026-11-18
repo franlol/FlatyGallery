@@ -109,13 +109,16 @@ local function BuildButtons(container)
         { "Danger", Click("Danger"), "danger" },
     }, Off()))
 
-    c = Card(page, 2, "Two-step confirm", "First click arms it, the second (within 3 s) runs it.")
-    local r = c:Add(UI.Buttons(c, {
-        { "Reset all", function() Log("Confirmed", "Reset all") end, "danger" },
-        { "Delete profile", function() Log("Confirmed", "Delete profile") end, "danger" },
+    c = Card(page, 2, "Two-step confirm", "confirm = true: the first click arms it, the second (within 3 s) runs it.")
+    c:AddHeaderButton("close", function() Log("Confirmed", "Header delete") end,
+        { tip = "Delete", style = "danger", confirm = true })
+    c:Add(UI.Buttons(c, {
+        { "Reset all", function() Log("Confirmed", "Reset all") end, "danger", confirm = true },
+        { "Delete profile", function() Log("Confirmed", "Delete profile") end, "danger", confirm = "Sure? Click again" },
     }, E()))
-    UI.Confirm(r.buttons[1])
-    UI.Confirm(r.buttons[2], "Sure? Click again")
+    c:Add(IconRow(c, 20, {
+        { "close", function() Log("Confirmed", "Icon delete") end, { tip = "Delete", style = "danger", confirm = true } },
+    }, E()))
 
     c = Card(page, 2, "Dialog", "Darkens the screen. Escape or Cancel closes it.")
     c:Add(UI.Buttons(c, {
@@ -382,9 +385,8 @@ local function BuildColors(container)
             S.colorOpt = nil
             Log("Color", nil)
             UI.RefreshAll()
-        end, "danger" },
+        end, "danger", confirm = true },
     }, E()))
-    UI.Confirm(r.buttons[2])
 
     page:Layout()
 end
