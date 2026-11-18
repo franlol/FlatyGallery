@@ -720,6 +720,283 @@ local function BuildSplit(container)
 end
 
 -------------------------------------------------------------------------------
+-- Media: the lib's textures, borders, fonts and shapes
+-------------------------------------------------------------------------------
+local M = {
+    bar = UI.Media("statusbar", "Flaty: Smooth"),
+    bg = UI.Media("background", "Flaty: Gradient up"),
+    border = UI.Media("border", "Flaty: Glow"),
+    borderSize = 8,
+    font = UI.Media("font", "Flaty: Inter"),
+    fontSize = 18,
+    outline = "",
+    shape = "round",
+    shapeBorder = 2,
+    glow = true,
+    color = { r = 0.27, g = 0.75, b = 0.45, a = 1 },
+    edgeColor = { r = 0.27, g = 0.75, b = 0.45, a = 1 },
+    shapeColor = { r = 0.27, g = 0.75, b = 0.45, a = 1 },
+    glowColor = { r = 0.27, g = 0.75, b = 0.45, a = 0.6 },
+}
+local function MGet(k) return function() return M[k] end end
+local function MSet(k, name, fmt)
+    return function(v) M[k] = v Log(name, fmt and fmt(v) or v) end
+end
+-- the shown name of a value in a media list
+local function MediaName(kind, value)
+    for _, o in ipairs(UI.MediaList(kind, { none = true })) do
+        if o[1] == value then return o[2] end
+    end
+    return value
+end
+local function OwnOnly(kind)
+    local out = {}
+    for _, o in ipairs(UI.MediaList(kind)) do
+        if o[2]:find("^Flaty: ") then out[#out + 1] = o end
+    end
+    return out
+end
+local function RGBA(c) return c.r, c.g, c.b, c.a or 1 end
+-- a preview that repaints on every change (and right away)
+local function Live(fn)
+    texts[#texts + 1] = fn
+    fn()
+end
+
+-- a bar 72% full, its name on top
+local function BarRow(parent, getPath, label)
+    local r = UI.Row(parent, 20)
+    local bg = r:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.5)
+    local bar = CreateFrame("StatusBar", nil, r)
+    bar:SetAllPoints()
+    bar:SetMinMaxValues(0, 1)
+    bar:SetValue(0.72)
+    local t = UI.Text(bar, label or "")
+    t:SetPoint("LEFT", 6, 0)
+    local function Paint()
+        UI.SetBarTexture(bar, getPath())
+        bar:SetStatusBarColor(RGBA(M.color))
+        if not label then t:SetText(MediaName("statusbar", getPath())) end
+    end
+    texts[#texts + 1] = Paint
+    Paint()
+    return r
+end
+
+-- a box with a backdrop border drawn around it
+local function BorderBox(parent, getPath, getSize, label)
+    local box = CreateFrame("Frame", nil, parent, "BackdropTemplate")
+    UI.Backdrop(box, UI.theme.fieldDark, { 0, 0, 0, 0 })
+    local edge = CreateFrame("Frame", nil, box, "BackdropTemplate")
+    edge:SetFrameLevel(box:GetFrameLevel())
+    local t = UI.Text(box, label or "")
+    t:SetPoint("CENTER")
+    local function Paint()
+        local path, size = UI.ResolveMedia(getPath()), getSize()
+        edge:ClearAllPoints()
+        edge:SetPoint("TOPLEFT", -size, size)
+        edge:SetPoint("BOTTOMRIGHT", size, -size)
+        edge:SetBackdrop(path and { edgeFile = path, edgeSize = size } or nil)
+        if path then edge:SetBackdropBorderColor(RGBA(M.edgeColor)) end
+        if not label then t:SetText(MediaName("border", getPath())) end
+    end
+    texts[#texts + 1] = Paint
+    Paint()
+    return box
+end
+
+local function BuildTextures(container)
+    local page = UI.Page(container, 2)
+
+    local c = Card(page, 1, "Bars", "statusbar")
+    for _, o in ipairs(OwnOnly("statusbar")) do
+        local path = o[1]
+        c:Add(BarRow(c, function() return path end, o[2]))
+    end
+    c:Add(UI.Separator(c))
+    c:Add(UI.Dropdown(c, "Texture", function() return UI.MediaList("statusbar", { none = true }) end,
+        MGet("bar"), MSet("bar", "Bar", function(v) return MediaName("statusbar", v) end), E()))
+    c:Add(BarRow(c, MGet("bar")))
+    c:Add(UI.Swatch(c, "Color", MGet("color"), function() Log("Bar color", M.color) end, E({ alpha = true })))
+
+    c = Card(page, 1, "Backgrounds", "background")
+    local r = UI.Row(c, 48)
+    local tiles = {}
+    for i, o in ipairs(OwnOnly("background")) do
+        local tile = r:CreateTexture(nil, "ARTWORK")
+        tile.path = o[1]
+        tiles[i] = tile
+        local name = UI.Text(r, (o[2]:gsub("^Flaty: Gradient ", "")), nil, UI.theme.muted)
+        name:SetPoint("TOP", tile, "BOTTOM", 0, -2)
+    end
+    r:SetScript("OnSizeChanged", function(self, w)
+        local tw = (w - 3 * 8) / 4
+        for i, tile in ipairs(tiles) do
+            tile:SetSize(tw, 32)
+            tile:SetPoint("TOPLEFT", (i - 1) * (tw + 8), 0)
+        end
+    end)
+    Live(function()
+        for _, tile in ipairs(tiles) do
+            UI.SetBgTexture(tile, tile.path)
+            tile:SetVertexColor(RGBA(M.color))
+        end
+    end)
+    c:Add(r)
+    c:Add(UI.Separator(c))
+    c:Add(UI.Dropdown(c, "Background", function() return UI.MediaList("background", { none = true }) end,
+        MGet("bg"), MSet("bg", "Background", function(v) return MediaName("background", v) end), E()))
+    r = UI.Row(c, 40)
+    local field = r:CreateTexture(nil, "BACKGROUND")
+    field:SetAllPoints()
+    field:SetColorTexture(unpack(UI.theme.fieldDark))
+    local bg = r:CreateTexture(nil, "ARTWORK")
+    bg:SetAllPoints()
+    Live(function()
+        UI.SetBgTexture(bg, M.bg)
+        bg:SetVertexColor(RGBA(M.color))
+    end)
+    c:Add(r)
+
+    c = Card(page, 2, "Borders", "border, drawn around the box")
+    r = UI.Row(c, 64)
+    local boxes = {}
+    for i, o in ipairs(OwnOnly("border")) do
+        local path = o[1]
+        boxes[i] = BorderBox(r, function() return path end, function() return i == 1 and 2 or 10 end,
+            (o[2]:gsub("^Flaty: ", "")))
+    end
+    r:SetScript("OnSizeChanged", function(self, w)
+        local bw = (w - 2 * 28 - 24) / 3
+        for i, box in ipairs(boxes) do
+            box:SetSize(bw, 40)
+            box:SetPoint("LEFT", 12 + (i - 1) * (bw + 28), 0)
+        end
+    end)
+    c:Add(r)
+    c:Add(UI.Separator(c))
+    c:Add(UI.Dropdown(c, "Border", function() return UI.MediaList("border", { none = true }) end,
+        MGet("border"), MSet("border", "Border", function(v) return MediaName("border", v) end), E()))
+    c:Add(UI.Slider(c, "Size", 1, 24, 1, MGet("borderSize"), MSet("borderSize", "Border size"), E({ format = UI.px })))
+    c:Add(UI.Swatch(c, "Color", MGet("edgeColor"), function() Log("Border color", M.edgeColor) end, E({ alpha = true })))
+    r = UI.Row(c, 84)
+    local box = BorderBox(r, MGet("border"), MGet("borderSize"))
+    box:SetPoint("TOPLEFT", 26, -22)
+    box:SetPoint("BOTTOMRIGHT", -26, 22)
+    c:Add(r)
+
+    page:Layout()
+end
+
+local SAMPLE = "Flaty 0123456789  áéíóú ñ ¿?"
+
+local function BuildFonts(container)
+    local page = UI.Page(container, 2)
+
+    local c = Card(page, 1, "Flaty fonts", "font")
+    for _, o in ipairs(OwnOnly("font")) do
+        local r = UI.Row(c, 40)
+        local name = r:CreateFontString(nil, "OVERLAY")
+        UI.SetFontFile(name, o[1], 16)
+        name:SetPoint("TOPLEFT")
+        name:SetText(o[2])
+        local sample = r:CreateFontString(nil, "OVERLAY")
+        UI.SetFontFile(sample, o[1], 12)
+        sample:SetPoint("TOPLEFT", name, "BOTTOMLEFT", 0, -3)
+        sample:SetTextColor(unpack(UI.theme.muted))
+        sample:SetText(SAMPLE)
+        c:Add(r)
+    end
+
+    c = Card(page, 2, "Pick a font", "the dropdown lists every font: ours, the game's and SharedMedia's")
+    c:Add(UI.Dropdown(c, "Font", function() return UI.MediaList("font") end,
+        MGet("font"), MSet("font", "Font", function(v) return MediaName("font", v) end), E()))
+    c:Add(UI.Slider(c, "Size", 8, 32, 1, MGet("fontSize"), MSet("fontSize", "Font size"), E({ format = UI.px })))
+    c:Add(UI.Segmented(c, "Outline", { { "", "None" }, { "OUTLINE", "Outline" }, { "THICKOUTLINE", "Thick" } },
+        MGet("outline"), MSet("outline", "Outline"), E()))
+    local r = UI.Row(c, 70)
+    local field = r:CreateTexture(nil, "BACKGROUND")
+    field:SetAllPoints()
+    field:SetColorTexture(unpack(UI.theme.fieldDark))
+    local fs = r:CreateFontString(nil, "OVERLAY")
+    fs:SetPoint("LEFT", 10, 0)
+    fs:SetPoint("RIGHT", -10, 0)
+    fs:SetWordWrap(false)
+    Live(function()
+        UI.SetFontFile(fs, M.font, M.fontSize, M.outline)
+        fs:SetText(SAMPLE)
+    end)
+    c:Add(r)
+
+    page:Layout()
+end
+
+-- the player's portrait cut to a shape, with the shape's border and glow
+local function ShapePreview(parent, size)
+    local f = CreateFrame("Frame", nil, parent)
+    f:SetSize(size, size)
+    local tex = f:CreateTexture(nil, "ARTWORK")
+    tex:SetAllPoints()
+    SetPortraitTexture(tex, "player", true)
+    f.border = UI.ShapeBorder(f)
+    function f:Paint(key, borderSize, borderColor, glowColor)
+        UI.SetShapeMask(tex, key)
+        self.border:SetShape(key)
+        self.border:SetBorder(borderSize, borderColor)
+        self.border:SetGlow(glowColor)
+    end
+    f:SetScript("OnShow", function() SetPortraitTexture(tex, "player", true) end)
+    return f
+end
+
+local function BuildShapes(container)
+    local page = UI.Page(container, 2)
+
+    local c = Card(page, 1, "Shapes", "mask, border and glow")
+    local r = UI.Row(c, 120)
+    local previews = {}
+    for i, o in ipairs(UI.ShapeList()) do
+        local p = ShapePreview(r, 72)
+        p.key = o[1]
+        previews[i] = p
+        local name = UI.Text(r, (o[2]:gsub("^Flaty: ", "")), nil, UI.theme.muted)
+        name:SetPoint("TOP", p, "BOTTOM", 0, -18)
+    end
+    r:SetScript("OnSizeChanged", function(self, w)
+        local step = w / #previews
+        for i, p in ipairs(previews) do
+            p:SetPoint("TOP", self, "TOPLEFT", step * (i - 0.5), -16)
+        end
+    end)
+    Live(function()
+        for _, p in ipairs(previews) do
+            p:Paint(p.key, 2, { RGBA(M.shapeColor) }, M.glow and { RGBA(M.glowColor) } or nil)
+        end
+    end)
+    c:Add(r)
+
+    c = Card(page, 2, "Try it", "how TidyMap draws the minimap")
+    c:Add(UI.Dropdown(c, "Shape", UI.ShapeList, MGet("shape"), MSet("shape", "Shape"), E()))
+    c:Add(UI.Slider(c, "Border", 0, 8, 1, MGet("shapeBorder"), MSet("shapeBorder", "Border"), E({ format = UI.px })))
+    c:Add(UI.Swatch(c, "Border color", MGet("shapeColor"), function() Log("Border color", M.shapeColor) end,
+        E({ alpha = true, enableIf = function() return M.shapeBorder > 0 end })))
+    c:Add(UI.Check(c, "Glow", MGet("glow"), MSet("glow", "Glow"), E()))
+    c:Add(UI.Swatch(c, "Glow color", MGet("glowColor"), function() Log("Glow color", M.glowColor) end,
+        E({ alpha = true, sub = true, enableIf = function() return M.glow end })))
+    r = UI.Row(c, 200)
+    local big = ShapePreview(r, 140)
+    big:SetPoint("CENTER")
+    Live(function()
+        big:Paint(M.shape, M.shapeBorder, { RGBA(M.shapeColor) }, M.glow and { RGBA(M.glowColor) } or nil)
+    end)
+    c:Add(r)
+
+    page:Layout()
+end
+
+-------------------------------------------------------------------------------
 -- Window
 -------------------------------------------------------------------------------
 local STRINGS = {
@@ -758,6 +1035,10 @@ local function Open()
     win:AddNav("cards", "Cards", BuildCards)
     win:AddNav("sections", "Sections", BuildSections)
     win:AddNav("split", "Tabs and split", BuildSplit)
+    win:AddSection("Media")
+    win:AddNav("textures", "Textures", BuildTextures)
+    win:AddNav("fonts", "Fonts", BuildFonts)
+    win:AddNav("shapes", "Shapes", BuildShapes)
     win:Select("buttons")
     win:SetStatus("Change anything: its new value shows here.")
 end

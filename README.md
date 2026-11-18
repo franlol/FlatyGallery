@@ -18,6 +18,9 @@ you changed.
 - **Cards**: folding cards, headings, separators, header buttons
 - **Sections**: page sections and cards that span columns
 - **Tabs and split**: a list on the left, tabbed details on the right
+- **Textures**: the lib's bars, backgrounds and borders, with a picker for each
+- **Fonts**: the lib's fonts, and a picker with size and outline
+- **Shapes**: masks, borders and glows on your portrait, as TidyMap draws the minimap
 
 The header buttons grey out every control (**Grey all**) and switch the lib's
 own texts to Spanish (**Español**).
